@@ -1,3 +1,9 @@
+# From Michelle 
+
+I'm trying to create a new feature for myself :rage3:
+
+# From Ajamar
+
 Universal Pokemon Randomizer ZX by Ajarmar
 
 With significant contributions from darkeye, cleartonic
