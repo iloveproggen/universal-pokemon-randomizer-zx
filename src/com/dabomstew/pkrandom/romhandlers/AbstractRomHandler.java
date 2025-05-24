@@ -699,6 +699,31 @@ public abstract class AbstractRomHandler implements RomHandler {
         return newAbility;
     }
 
+    private int getMinimumEvolutionLevel(Pokemon p) {
+        int minLevel = 1;
+        Pokemon current = p;
+        while (!current.evolutionsTo.isEmpty()) {
+            int nextMin = Integer.MAX_VALUE;
+            for (Evolution evo : current.evolutionsTo) {
+                if (evo.type.usesLevel()) {
+                    nextMin = Math.min(nextMin, evo.extraInfo);
+                }
+            }
+            if (nextMin == Integer.MAX_VALUE) {
+                // No more level-based pre-evolutions
+                break;
+            }
+            minLevel = Math.max(minLevel, nextMin);
+            // Find the pre-evolution and continue
+            if (!current.evolutionsTo.isEmpty()) {
+                current = current.evolutionsTo.get(0).from;
+            } else {
+                break;
+            }
+        }
+        return minLevel;
+    }
+
     @Override
     public void randomEncounters(Settings settings) {
         boolean useTimeOfDay = settings.isUseTimeBasedEncounters();
@@ -713,8 +738,7 @@ public abstract class AbstractRomHandler implements RomHandler {
         boolean allowAltFormes = settings.isAllowWildAltFormes();
         boolean banIrregularAltFormes = settings.isBanIrregularAltFormes();
         boolean abilitiesAreRandomized = settings.getAbilitiesMod() == Settings.AbilitiesMod.RANDOMIZE;
-        boolean evolutionSanity = true;
-        // TODO: implement
+        boolean evolutionSensibility = settings.getIsEvolutionSensibility();
 
         List<EncounterSet> currentEncounters = this.getEncounters(useTimeOfDay);
 
@@ -797,35 +821,15 @@ public abstract class AbstractRomHandler implements RomHandler {
                         int picked = this.random.nextInt(tempPickable.size());
                         enc.pokemon = tempPickable.get(picked);
                         // --- MICHELLE: Begin evolution sanity check ---
-                        boolean needsReroll = false;
-                        do {
-                            needsReroll = false;
-                            // Check if this Pokémon is evolved (has at least one pre-evolution)
-                            if (!enc.pokemon.evolutionsTo.isEmpty()) {
-                                // Find the minimum level at which this Pokémon could have evolved
-                                int minEvoLevel = Integer.MAX_VALUE;
-                                for (Evolution evo : enc.pokemon.evolutionsTo) {
-                                    if (evo.type.usesLevel()) {
-                                        minEvoLevel = Math.min(minEvoLevel, evo.extraInfo);
-                                    }
-                                }
-                                // If it has a level-based pre-evolution and the encounter level is too low,
-                                // reroll
-                                if (minEvoLevel != Integer.MAX_VALUE && enc.level < minEvoLevel) {
-                                    // Pick a new Pokémon from the pool that is not evolved or can appear at this
-                                    // level
+                        if(evolutionSensibility) {
+                            boolean needsReroll = false;
+                            do {
+                                needsReroll = false;
+                                int minEvoLevel = getMinimumEvolutionLevel(enc.pokemon);
+                                if (enc.level < minEvoLevel) {
+                                    // Pick a new Pokémon from the pool that can exist at this level
                                     List<Pokemon> validChoices = pickablePokemon.stream()
-                                            .filter(pk -> {
-                                                if (pk.evolutionsTo.isEmpty())
-                                                    return true; // Not evolved, always valid
-                                                int minLevel = Integer.MAX_VALUE;
-                                                for (Evolution evo : pk.evolutionsTo) {
-                                                    if (evo.type.usesLevel()) {
-                                                        minLevel = Math.min(minLevel, evo.extraInfo);
-                                                    }
-                                                }
-                                                return minLevel == Integer.MAX_VALUE || enc.level >= minLevel;
-                                            })
+                                            .filter(pk -> enc.level >= getMinimumEvolutionLevel(pk))
                                             .collect(Collectors.toList());
                                     if (validChoices.isEmpty()) {
                                         // fallback: allow any Pokémon
@@ -834,58 +838,8 @@ public abstract class AbstractRomHandler implements RomHandler {
                                     enc.pokemon = validChoices.get(this.random.nextInt(validChoices.size()));
                                     needsReroll = true;
                                 }
-                            }
-                        } while (needsReroll);
-                        // --- MICHELLE: End evolution sanity check ---
-                        setFormeForEncounter(enc, enc.pokemon);
-                    } else {
-                        // Picked this Pokemon, remove it
-                        int picked = this.random.nextInt(pickablePokemon.size());
-                        enc.pokemon = pickablePokemon.get(picked);
-                        pickablePokemon.remove(picked);
-                        if (allPokes != pickablePokemon) {
-                            allPokes.remove(enc.pokemon);
+                            } while (needsReroll);
                         }
-                        // --- MICHELLE: Begin evolution sanity check ---
-                        boolean needsReroll = false;
-                        do {
-                            needsReroll = false;
-                            // Check if this Pokémon is evolved (has at least one pre-evolution)
-                            if (!enc.pokemon.evolutionsTo.isEmpty()) {
-                                // Find the minimum level at which this Pokémon could have evolved
-                                int minEvoLevel = Integer.MAX_VALUE;
-                                for (Evolution evo : enc.pokemon.evolutionsTo) {
-                                    if (evo.type.usesLevel()) {
-                                        minEvoLevel = Math.min(minEvoLevel, evo.extraInfo);
-                                    }
-                                }
-                                // If it has a level-based pre-evolution and the encounter level is too low,
-                                // reroll
-                                if (minEvoLevel != Integer.MAX_VALUE && enc.level < minEvoLevel) {
-                                    // Pick a new Pokémon from the pool that is not evolved or can appear at this
-                                    // level
-                                    List<Pokemon> validChoices = pickablePokemon.stream()
-                                            .filter(pk -> {
-                                                if (pk.evolutionsTo.isEmpty())
-                                                    return true; // Not evolved, always valid
-                                                int minLevel = Integer.MAX_VALUE;
-                                                for (Evolution evo : pk.evolutionsTo) {
-                                                    if (evo.type.usesLevel()) {
-                                                        minLevel = Math.min(minLevel, evo.extraInfo);
-                                                    }
-                                                }
-                                                return minLevel == Integer.MAX_VALUE || enc.level >= minLevel;
-                                            })
-                                            .collect(Collectors.toList());
-                                    if (validChoices.isEmpty()) {
-                                        // fallback: allow any Pokémon
-                                        validChoices = new ArrayList<>(pickablePokemon);
-                                    }
-                                    enc.pokemon = validChoices.get(this.random.nextInt(validChoices.size()));
-                                    needsReroll = true;
-                                }
-                            }
-                        } while (needsReroll);
                         // --- MICHELLE: End evolution sanity check ---
                         setFormeForEncounter(enc, enc.pokemon);
                         if (allPokes.size() == 0) {
@@ -939,6 +893,27 @@ public abstract class AbstractRomHandler implements RomHandler {
                     while (enc.pokemon.actuallyCosmetic) {
                         enc.pokemon = possiblePokemon.get(this.random.nextInt(possiblePokemon.size()));
                     }
+                    // --- MICHELLE: Begin evolution sanity check ---
+                    if(evolutionSensibility) {
+                        boolean needsReroll = false;
+                        do {
+                            needsReroll = false;
+                            int minEvoLevel = getMinimumEvolutionLevel(enc.pokemon);
+                            if (enc.level < minEvoLevel) {
+                                // Pick a new Pokémon from the pool that can exist at this level
+                                List<Pokemon> validChoices = possiblePokemon.stream()
+                                        .filter(pk -> enc.level >= getMinimumEvolutionLevel(pk))
+                                        .collect(Collectors.toList());
+                                if (validChoices.isEmpty()) {
+                                    // fallback: allow any Pokémon
+                                    validChoices = new ArrayList<>(possiblePokemon);
+                                }
+                                enc.pokemon = validChoices.get(this.random.nextInt(validChoices.size()));
+                                needsReroll = true;
+                            }
+                        } while (needsReroll);
+                    }
+                    // --- MICHELLE: End evolution sanity check ---
                     setFormeForEncounter(enc, enc.pokemon);
                 }
             }
@@ -989,6 +964,19 @@ public abstract class AbstractRomHandler implements RomHandler {
             for (EncounterSet area : scrambledEncounters) {
                 for (Encounter enc : area.encounters) {
                     enc.pokemon = pickEntirelyRandomPokemon(allowAltFormes, noLegendaries, area, banned);
+                    // --- MICHELLE: Begin evolution sanity check ---
+                    if(evolutionSensibility) {
+                        boolean needsReroll = false;
+                        do {
+                            needsReroll = false;
+                            int minEvoLevel = getMinimumEvolutionLevel(enc.pokemon);
+                            if (enc.level < minEvoLevel) {
+                                enc.pokemon = pickEntirelyRandomPokemon(allowAltFormes, noLegendaries, area, banned);
+                                needsReroll = true;
+                            }
+                        } while (needsReroll);
+                    }
+                    // --- MICHELLE: End evolution sanity check ---
                     setFormeForEncounter(enc, enc.pokemon);
                 }
             }
@@ -1032,7 +1020,7 @@ public abstract class AbstractRomHandler implements RomHandler {
         boolean allowAltFormes = settings.isAllowWildAltFormes();
         boolean banIrregularAltFormes = settings.isBanIrregularAltFormes();
         boolean abilitiesAreRandomized = settings.getAbilitiesMod() == Settings.AbilitiesMod.RANDOMIZE;
-        boolean evolutionSanity = true;
+        boolean evolutionSensibility = settings.getIsEvolutionSensibility();
         // TODO: Implement checkbox for this setting in application
         // settings.isEvolutionsFollowEncounters();
 
@@ -1053,18 +1041,6 @@ public abstract class AbstractRomHandler implements RomHandler {
         List<EncounterSet> scrambledEncounters = new ArrayList<>(currentEncounters);
         Collections.shuffle(scrambledEncounters, this.random);
 
-        /*
-         * TODO: I believe this is where i should add my changes:
-         * 
-         * Encounters should first check if the pokemon is evolved. If it is, then check
-         * for when the Pokemon will evolve.
-         * If the level of the encounter is lower than the level of when the Pokemon
-         * would evolve normally,
-         * then it should be re-randomized.
-         * 
-         * This way, you won't encounter any fully evolved Pokemon that wouldn't be in
-         * the game normally.
-         */
 
         // Assume EITHER catch em all OR type themed for now
         if (catchEmAll) {
@@ -1148,44 +1124,22 @@ public abstract class AbstractRomHandler implements RomHandler {
                     enc.pokemon = areaMap.get(enc.pokemon);
 
                     // --- MICHELLE : Begin evolution sanity check ---
-                    if (evolutionSanity) {
+                    if (evolutionSensibility) {
                         boolean needsReroll = false;
                         do {
                             needsReroll = false;
-                            // Check if this Pokémon is evolved (has at least one pre-evolution)
-                            if (!enc.pokemon.evolutionsTo.isEmpty()) {
-                                // Find the minimum level at which this Pokémon could have evolved
-                                int minEvoLevel = Integer.MAX_VALUE;
-                                for (Evolution evo : enc.pokemon.evolutionsTo) {
-                                    if (evo.type.usesLevel()) {
-                                        minEvoLevel = Math.min(minEvoLevel, evo.extraInfo);
-                                    }
+                            int minEvoLevel = getMinimumEvolutionLevel(enc.pokemon);
+                            if (enc.level < minEvoLevel) {
+                                // Pick a new Pokémon from the pool that can exist at this level
+                                List<Pokemon> validChoices = pickablePokemon.stream()
+                                        .filter(pk -> enc.level >= getMinimumEvolutionLevel(pk))
+                                        .collect(Collectors.toList());
+                                if (validChoices.isEmpty()) {
+                                    // fallback: allow any Pokémon
+                                    validChoices = new ArrayList<>(pickablePokemon);
                                 }
-                                // If it has a level-based pre-evolution and the encounter level is too low,
-                                // reroll
-                                if (minEvoLevel != Integer.MAX_VALUE && enc.level < minEvoLevel) {
-                                    // Pick a new Pokémon from the pool that is not evolved or can appear at this
-                                    // level
-                                    List<Pokemon> validChoices = pickablePokemon.stream()
-                                            .filter(pk -> {
-                                                if (pk.evolutionsTo.isEmpty())
-                                                    return true; // Not evolved, always valid
-                                                int minLevel = Integer.MAX_VALUE;
-                                                for (Evolution evo : pk.evolutionsTo) {
-                                                    if (evo.type.usesLevel()) {
-                                                        minLevel = Math.min(minLevel, evo.extraInfo);
-                                                    }
-                                                }
-                                                return minLevel == Integer.MAX_VALUE || enc.level >= minLevel;
-                                            })
-                                            .collect(Collectors.toList());
-                                    if (validChoices.isEmpty()) {
-                                        // fallback: allow any Pokémon
-                                        validChoices = new ArrayList<>(pickablePokemon);
-                                    }
-                                    enc.pokemon = validChoices.get(this.random.nextInt(validChoices.size()));
-                                    needsReroll = true;
-                                }
+                                enc.pokemon = validChoices.get(this.random.nextInt(validChoices.size()));
+                                needsReroll = true;
                             }
                         } while (needsReroll);
                     }
@@ -1241,44 +1195,22 @@ public abstract class AbstractRomHandler implements RomHandler {
                     // Apply the map
                     enc.pokemon = areaMap.get(enc.pokemon);
                     // --- MICHELLE : Begin evolution sanity check ---
-                    if (evolutionSanity) {
+                    if (evolutionSensibility) {
                         boolean needsReroll = false;
                         do {
                             needsReroll = false;
-                            // Check if this Pokémon is evolved (has at least one pre-evolution)
-                            if (!enc.pokemon.evolutionsTo.isEmpty()) {
-                                // Find the minimum level at which this Pokémon could have evolved
-                                int minEvoLevel = Integer.MAX_VALUE;
-                                for (Evolution evo : enc.pokemon.evolutionsTo) {
-                                    if (evo.type.usesLevel()) {
-                                        minEvoLevel = Math.min(minEvoLevel, evo.extraInfo);
-                                    }
+                            int minEvoLevel = getMinimumEvolutionLevel(enc.pokemon);
+                            if (enc.level < minEvoLevel) {
+                                // Pick a new Pokémon from the pool that can exist at this level
+                                List<Pokemon> validChoices = possiblePokemon.stream()
+                                        .filter(pk -> enc.level >= getMinimumEvolutionLevel(pk))
+                                        .collect(Collectors.toList());
+                                if (validChoices.isEmpty()) {
+                                    // fallback: allow any Pokémon
+                                    validChoices = new ArrayList<>(possiblePokemon);
                                 }
-                                // If it has a level-based pre-evolution and the encounter level is too low,
-                                // reroll
-                                if (minEvoLevel != Integer.MAX_VALUE && enc.level < minEvoLevel) {
-                                    // Pick a new Pokémon from the pool that is not evolved or can appear at this
-                                    // level
-                                    List<Pokemon> validChoices = possiblePokemon.stream()
-                                            .filter(pk -> {
-                                                if (pk.evolutionsTo.isEmpty())
-                                                    return true; // Not evolved, always valid
-                                                int minLevel = Integer.MAX_VALUE;
-                                                for (Evolution evo : pk.evolutionsTo) {
-                                                    if (evo.type.usesLevel()) {
-                                                        minLevel = Math.min(minLevel, evo.extraInfo);
-                                                    }
-                                                }
-                                                return minLevel == Integer.MAX_VALUE || enc.level >= minLevel;
-                                            })
-                                            .collect(Collectors.toList());
-                                    if (validChoices.isEmpty()) {
-                                        // fallback: allow any Pokémon
-                                        validChoices = new ArrayList<>(possiblePokemon);
-                                    }
-                                    enc.pokemon = validChoices.get(this.random.nextInt(validChoices.size()));
-                                    needsReroll = true;
-                                }
+                                enc.pokemon = validChoices.get(this.random.nextInt(validChoices.size()));
+                                needsReroll = true;
                             }
                         } while (needsReroll);
                     }
@@ -1339,6 +1271,20 @@ public abstract class AbstractRomHandler implements RomHandler {
                 for (Encounter enc : area.encounters) {
                     // Apply the map
                     enc.pokemon = areaMap.get(enc.pokemon);
+
+                    // --- MICHELLE: Begin evolution sanity check ---
+                    if(evolutionSensibility) {
+                        boolean needsReroll = false;
+                        do {
+                            needsReroll = false;
+                            int minEvoLevel = getMinimumEvolutionLevel(enc.pokemon);
+                            if (enc.level < minEvoLevel) {
+                                enc.pokemon = areaMap.get(enc.pokemon);
+                                needsReroll = true;
+                            }
+                        } while (needsReroll);
+                    }
+                    // --- MICHELLE: End evolution sanity check ---
                     setFormeForEncounter(enc, enc.pokemon);
                 }
             }

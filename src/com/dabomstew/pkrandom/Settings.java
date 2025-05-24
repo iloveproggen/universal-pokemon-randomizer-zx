@@ -66,6 +66,19 @@ public class Settings {
     private boolean limitPokemon;
     private boolean banIrregularAltFormes;
     private boolean dualTypeOnly;
+    private boolean evolutionSensibility;
+
+    public boolean isEvolutionSensibility() {
+        return evolutionSensibility;
+    }
+
+    public void setIsEvolutionSensibility(boolean evolutionSensibility) {
+        this.evolutionSensibility = evolutionSensibility;
+    }
+
+    public boolean getIsEvolutionSensibility() {
+        return evolutionSensibility;
+    }
 
     public enum BaseStatisticsMod {
         UNCHANGED, SHUFFLE, RANDOM,
