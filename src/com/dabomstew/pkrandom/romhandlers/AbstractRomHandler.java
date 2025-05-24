@@ -700,28 +700,24 @@ public abstract class AbstractRomHandler implements RomHandler {
     }
 
     private int getMinimumEvolutionLevel(Pokemon p) {
-        int minLevel = 1;
-        Pokemon current = p;
-        while (!current.evolutionsTo.isEmpty()) {
-            int nextMin = Integer.MAX_VALUE;
-            for (Evolution evo : current.evolutionsTo) {
-                if (evo.type.usesLevel()) {
-                    nextMin = Math.min(nextMin, evo.extraInfo);
-                }
-            }
-            if (nextMin == Integer.MAX_VALUE) {
-                // No more level-based pre-evolutions
-                break;
-            }
-            minLevel = Math.max(minLevel, nextMin);
-            // Find the pre-evolution and continue
-            if (!current.evolutionsTo.isEmpty()) {
-                current = current.evolutionsTo.get(0).from;
-            } else {
-                break;
-            }
+        return getMinimumEvolutionLevelRecursive(p, new HashSet<>());
+    }
+
+    private int getMinimumEvolutionLevelRecursive(Pokemon p, Set<Pokemon> visited) {
+        if (visited.contains(p) || p.evolutionsTo.isEmpty()) {
+            return 1;
         }
-        return minLevel;
+        visited.add(p);
+        int maxLevel = 1;
+        for (Evolution evo : p.evolutionsTo) {
+            int evoLevel = 1;
+            if (evo.type.usesLevel()) {
+                evoLevel = evo.extraInfo;
+            }
+            int preEvoLevel = getMinimumEvolutionLevelRecursive(evo.from, visited);
+            maxLevel = Math.max(maxLevel, Math.max(evoLevel, preEvoLevel));
+        }
+        return maxLevel;
     }
 
     @Override
@@ -738,7 +734,7 @@ public abstract class AbstractRomHandler implements RomHandler {
         boolean allowAltFormes = settings.isAllowWildAltFormes();
         boolean banIrregularAltFormes = settings.isBanIrregularAltFormes();
         boolean abilitiesAreRandomized = settings.getAbilitiesMod() == Settings.AbilitiesMod.RANDOMIZE;
-        boolean evolutionSensibility = settings.getIsEvolutionSensibility();
+        boolean evolutionSensibility = settings.isEvolutionSensibility();
 
         List<EncounterSet> currentEncounters = this.getEncounters(useTimeOfDay);
 
@@ -821,7 +817,7 @@ public abstract class AbstractRomHandler implements RomHandler {
                         int picked = this.random.nextInt(tempPickable.size());
                         enc.pokemon = tempPickable.get(picked);
                         // --- MICHELLE: Begin evolution sanity check ---
-                        if(evolutionSensibility) {
+                        if (evolutionSensibility) {
                             boolean needsReroll = false;
                             do {
                                 needsReroll = false;
@@ -894,7 +890,7 @@ public abstract class AbstractRomHandler implements RomHandler {
                         enc.pokemon = possiblePokemon.get(this.random.nextInt(possiblePokemon.size()));
                     }
                     // --- MICHELLE: Begin evolution sanity check ---
-                    if(evolutionSensibility) {
+                    if (evolutionSensibility) {
                         boolean needsReroll = false;
                         do {
                             needsReroll = false;
@@ -965,7 +961,7 @@ public abstract class AbstractRomHandler implements RomHandler {
                 for (Encounter enc : area.encounters) {
                     enc.pokemon = pickEntirelyRandomPokemon(allowAltFormes, noLegendaries, area, banned);
                     // --- MICHELLE: Begin evolution sanity check ---
-                    if(evolutionSensibility) {
+                    if (evolutionSensibility) {
                         boolean needsReroll = false;
                         do {
                             needsReroll = false;
@@ -1040,7 +1036,6 @@ public abstract class AbstractRomHandler implements RomHandler {
         // Need to keep the original ordering around for saving though.
         List<EncounterSet> scrambledEncounters = new ArrayList<>(currentEncounters);
         Collections.shuffle(scrambledEncounters, this.random);
-
 
         // Assume EITHER catch em all OR type themed for now
         if (catchEmAll) {
@@ -1273,7 +1268,7 @@ public abstract class AbstractRomHandler implements RomHandler {
                     enc.pokemon = areaMap.get(enc.pokemon);
 
                     // --- MICHELLE: Begin evolution sanity check ---
-                    if(evolutionSensibility) {
+                    if (evolutionSensibility) {
                         boolean needsReroll = false;
                         do {
                             needsReroll = false;

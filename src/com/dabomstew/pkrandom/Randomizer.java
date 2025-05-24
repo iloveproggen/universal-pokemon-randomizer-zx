@@ -1084,6 +1084,11 @@ public class Randomizer {
     private void logWildPokemonChanges(final PrintStream log) {
 
         log.println("--Wild Pokemon--");
+        if (settings.isEvolutionSensibility()) {
+            log.println("Evolution Sensibility: Enabled." + NEWLINE);
+        } else {
+            log.println("Evolution Sensibility: Disabled." + NEWLINE);
+        }
         boolean useTimeBasedEncounters = settings.isUseTimeBasedEncounters() ||
                 (settings.getWildPokemonMod() == Settings.WildPokemonMod.UNCHANGED && settings.isWildLevelsModified());
         List<EncounterSet> encounters = romHandler.getEncounters(useTimeBasedEncounters);
