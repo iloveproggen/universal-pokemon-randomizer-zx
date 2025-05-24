@@ -2,6 +2,16 @@
 
 I'm trying to create a new feature for myself :rage3:
 
+## To-Do
+
+### Create evolutionSensibility option (✔️)
+Currently working in: 
+- Random Encounters (Catch em all & Type Themed)
+- Area 1 to 1 Mapping (Catch em all & Type Themed)
+Only tested on Area1-1 Catch em All.
+
+### Create Checkbox to toggle setting (❎)
+
 # From Ajamar
 
 Universal Pokemon Randomizer ZX by Ajarmar
