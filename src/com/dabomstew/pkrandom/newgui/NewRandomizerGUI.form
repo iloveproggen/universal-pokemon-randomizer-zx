@@ -2454,8 +2454,9 @@
                       <gridbag weightx="0.0" weighty="0.0"/>
                     </constraints>
                     <properties>
-                      <text resource-bundle="com/dabomstew/pkrandom/newgui/Bundle" key="GUI.wpEvolutionSanityCheckBox.text"/>
-                      <toolTipText resource-bundle="com/dabomstew/pkrandom/newgui/Bundle" key="GUI.wpEvolutionSanityCheckBox.toolTipText"/>
+                      <enabled value="true"/>
+                      <text resource-bundle="com/dabomstew/pkrandom/newgui/Bundle" key="GUI.wpEvolutionSensibilityCheckBox.text"/>
+                      <toolTipText resource-bundle="com/dabomstew/pkrandom/newgui/Bundle" key="GUI.wpEvolutionSensibilityCheckBox.toolTipText"/>
                     </properties>
                   </component>
                 </children>

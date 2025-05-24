@@ -3390,6 +3390,15 @@ public class NewRandomizerGUI {
         gbc.gridy = 9;
         gbc.anchor = GridBagConstraints.WEST;
         panel17.add(wpAllowAltFormesCheckBox, gbc);
+        wpEvolutionSensibility = new JCheckBox();
+        wpEvolutionSensibility.setEnabled(true);
+        this.$$$loadButtonText$$$(wpEvolutionSensibility, this.$$$getMessageFromBundle$$$("com/dabomstew/pkrandom/newgui/Bundle", "GUI.wpEvolutionSensibilityCheckBox.text"));
+        wpEvolutionSensibility.setToolTipText(this.$$$getMessageFromBundle$$$("com/dabomstew/pkrandom/newgui/Bundle", "GUI.wpEvolutionSensibilityCheckBox.toolTipText"));
+        gbc = new GridBagConstraints();
+        gbc.gridx = 2;
+        gbc.gridy = 8;
+        gbc.anchor = GridBagConstraints.NORTHWEST;
+        panel17.add(wpEvolutionSensibility, gbc);
         final JPanel spacer70 = new JPanel();
         gbc = new GridBagConstraints();
         gbc.gridx = 2;
@@ -5142,7 +5151,7 @@ public class NewRandomizerGUI {
         wpARCatchEmAllModeRadioButton
                 .setSelected(settings.getWildPokemonRestrictionMod() == Settings.WildPokemonRestrictionMod.CATCH_EM_ALL);
         wpArea1To1RadioButton.setSelected(settings.getWildPokemonMod() == Settings.WildPokemonMod.AREA_MAPPING);
-        wpEvolutionSensibility.setSelected(settings.isEvolutionSanity());
+        wpEvolutionSensibility.setSelected(settings.isEvolutionSensibility());
         wpARNoneRadioButton.setSelected(settings.getWildPokemonRestrictionMod() == Settings.WildPokemonRestrictionMod.NONE);
         wpARTypeThemeAreasRadioButton
                 .setSelected(settings.getWildPokemonRestrictionMod() == Settings.WildPokemonRestrictionMod.TYPE_THEME_AREAS);
