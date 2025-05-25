@@ -720,6 +720,13 @@ public abstract class AbstractRomHandler implements RomHandler {
         return maxLevel;
     }
 
+    private Pokemon getBaseForm(Pokemon pk) {
+        while (!pk.evolutionsTo.isEmpty()) {
+            pk = pk.evolutionsTo.get(0).from;
+        }
+        return pk;
+    }
+
     @Override
     public void randomEncounters(Settings settings) {
         boolean useTimeOfDay = settings.isUseTimeBasedEncounters();
@@ -828,8 +835,11 @@ public abstract class AbstractRomHandler implements RomHandler {
                                             .filter(pk -> enc.level >= getMinimumEvolutionLevel(pk))
                                             .collect(Collectors.toList());
                                     if (validChoices.isEmpty()) {
-                                        // fallback: allow any Pokémon
-                                        validChoices = new ArrayList<>(pickablePokemon);
+                                        // Fallback: use the base form of the originally picked Pokémon
+                                        Pokemon baseForm = getBaseForm(enc.pokemon);
+                                        enc.pokemon = baseForm;
+                                        needsReroll = false; 
+                                        break; 
                                     }
                                     enc.pokemon = validChoices.get(this.random.nextInt(validChoices.size()));
                                     needsReroll = true;
@@ -901,8 +911,11 @@ public abstract class AbstractRomHandler implements RomHandler {
                                         .filter(pk -> enc.level >= getMinimumEvolutionLevel(pk))
                                         .collect(Collectors.toList());
                                 if (validChoices.isEmpty()) {
-                                    // fallback: allow any Pokémon
-                                    validChoices = new ArrayList<>(possiblePokemon);
+                                    // Fallback: use the base form of the originally picked Pokémon
+                                    Pokemon baseForm = getBaseForm(enc.pokemon);
+                                    enc.pokemon = baseForm;
+                                    needsReroll = false; 
+                                    break; 
                                 }
                                 enc.pokemon = validChoices.get(this.random.nextInt(validChoices.size()));
                                 needsReroll = true;
@@ -1017,8 +1030,6 @@ public abstract class AbstractRomHandler implements RomHandler {
         boolean banIrregularAltFormes = settings.isBanIrregularAltFormes();
         boolean abilitiesAreRandomized = settings.getAbilitiesMod() == Settings.AbilitiesMod.RANDOMIZE;
         boolean evolutionSensibility = settings.getIsEvolutionSensibility();
-        // TODO: Implement checkbox for this setting in application
-        // settings.isEvolutionsFollowEncounters();
 
         checkPokemonRestrictions();
         List<Pokemon> banned = this.bannedForWildEncounters();
@@ -1130,15 +1141,17 @@ public abstract class AbstractRomHandler implements RomHandler {
                                         .filter(pk -> enc.level >= getMinimumEvolutionLevel(pk))
                                         .collect(Collectors.toList());
                                 if (validChoices.isEmpty()) {
-                                    // fallback: allow any Pokémon
-                                    validChoices = new ArrayList<>(pickablePokemon);
+                                    // Fallback: use the base form of the originally picked Pokémon
+                                    Pokemon baseForm = getBaseForm(enc.pokemon);
+                                    enc.pokemon = baseForm;
+                                    needsReroll = false; 
+                                    break; 
                                 }
                                 enc.pokemon = validChoices.get(this.random.nextInt(validChoices.size()));
                                 needsReroll = true;
                             }
                         } while (needsReroll);
                     }
-
                     // --- MICHELLE : End evolution sanity check ---
 
                     setFormeForEncounter(enc, enc.pokemon);
@@ -1201,15 +1214,14 @@ public abstract class AbstractRomHandler implements RomHandler {
                                         .filter(pk -> enc.level >= getMinimumEvolutionLevel(pk))
                                         .collect(Collectors.toList());
                                 if (validChoices.isEmpty()) {
-                                    // fallback: allow any Pokémon
-                                    validChoices = new ArrayList<>(possiblePokemon);
+                                    log("No valid Pokémon found for level " + enc.level + ". Skipping slot.");
+                                    continue;
                                 }
                                 enc.pokemon = validChoices.get(this.random.nextInt(validChoices.size()));
                                 needsReroll = true;
                             }
                         } while (needsReroll);
                     }
-
                     // --- MICHELLE : End evolution sanity check ---
                     setFormeForEncounter(enc, enc.pokemon);
                 }
@@ -1275,6 +1287,7 @@ public abstract class AbstractRomHandler implements RomHandler {
                             int minEvoLevel = getMinimumEvolutionLevel(enc.pokemon);
                             if (enc.level < minEvoLevel) {
                                 enc.pokemon = areaMap.get(enc.pokemon);
+                                log(enc.pokemon.name + " rerolled due to evolutionSensibility check.");
                                 needsReroll = true;
                             }
                         } while (needsReroll);
