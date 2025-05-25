@@ -700,6 +700,9 @@ public abstract class AbstractRomHandler implements RomHandler {
     }
 
     private int getMinimumEvolutionLevel(Pokemon p) {
+        if (p.baseForme != null) {
+            p = p.baseForme;
+        }
         return getMinimumEvolutionLevelRecursive(p, new HashSet<>());
     }
 
@@ -721,8 +724,11 @@ public abstract class AbstractRomHandler implements RomHandler {
     }
 
     private Pokemon getBaseForm(Pokemon pk) {
-        while (!pk.evolutionsTo.isEmpty()) {
-            pk = pk.evolutionsTo.get(0).from;
+        if (pk.baseForme != null) {
+            pk = pk.baseForme;
+        }
+        while (!pk.evolutionsFrom.isEmpty()) {
+            pk = pk.evolutionsFrom.getFirst().from;
         }
         return pk;
     }
@@ -832,14 +838,18 @@ public abstract class AbstractRomHandler implements RomHandler {
                                 if (enc.level < minEvoLevel) {
                                     // Pick a new Pokémon from the pool that can exist at this level
                                     List<Pokemon> validChoices = pickablePokemon.stream()
-                                            .filter(pk -> enc.level >= getMinimumEvolutionLevel(pk))
+                                            .filter(pk -> {
+                                                Pokemon base = pk.baseForme != null ? pk.baseForme : pk;
+                                                return enc.level >= getMinimumEvolutionLevel(base);
+                                            })
                                             .collect(Collectors.toList());
                                     if (validChoices.isEmpty()) {
                                         // Fallback: use the base form of the originally picked Pokémon
-                                        Pokemon baseForm = getBaseForm(enc.pokemon);
+                                        Pokemon baseForm = getBaseForm(
+                                                enc.pokemon.baseForme != null ? enc.pokemon.baseForme : enc.pokemon);
                                         enc.pokemon = baseForm;
-                                        needsReroll = false; 
-                                        break; 
+                                        needsReroll = false;
+                                        break;
                                     }
                                     enc.pokemon = validChoices.get(this.random.nextInt(validChoices.size()));
                                     needsReroll = true;
@@ -908,14 +918,18 @@ public abstract class AbstractRomHandler implements RomHandler {
                             if (enc.level < minEvoLevel) {
                                 // Pick a new Pokémon from the pool that can exist at this level
                                 List<Pokemon> validChoices = possiblePokemon.stream()
-                                        .filter(pk -> enc.level >= getMinimumEvolutionLevel(pk))
+                                        .filter(pk -> {
+                                            Pokemon base = pk.baseForme != null ? pk.baseForme : pk;
+                                            return enc.level >= getMinimumEvolutionLevel(base);
+                                        })
                                         .collect(Collectors.toList());
                                 if (validChoices.isEmpty()) {
                                     // Fallback: use the base form of the originally picked Pokémon
-                                    Pokemon baseForm = getBaseForm(enc.pokemon);
+                                    Pokemon baseForm = getBaseForm(
+                                            enc.pokemon.baseForme != null ? enc.pokemon.baseForme : enc.pokemon);
                                     enc.pokemon = baseForm;
-                                    needsReroll = false; 
-                                    break; 
+                                    needsReroll = false;
+                                    break;
                                 }
                                 enc.pokemon = validChoices.get(this.random.nextInt(validChoices.size()));
                                 needsReroll = true;
@@ -978,7 +992,8 @@ public abstract class AbstractRomHandler implements RomHandler {
                         boolean needsReroll = false;
                         do {
                             needsReroll = false;
-                            int minEvoLevel = getMinimumEvolutionLevel(enc.pokemon);
+                            Pokemon base = enc.pokemon.baseForme != null ? enc.pokemon.baseForme : enc.pokemon;
+                            int minEvoLevel = getMinimumEvolutionLevel(base);
                             if (enc.level < minEvoLevel) {
                                 enc.pokemon = pickEntirelyRandomPokemon(allowAltFormes, noLegendaries, area, banned);
                                 needsReroll = true;
@@ -1138,14 +1153,18 @@ public abstract class AbstractRomHandler implements RomHandler {
                             if (enc.level < minEvoLevel) {
                                 // Pick a new Pokémon from the pool that can exist at this level
                                 List<Pokemon> validChoices = pickablePokemon.stream()
-                                        .filter(pk -> enc.level >= getMinimumEvolutionLevel(pk))
+                                        .filter(pk -> {
+                                            Pokemon base = pk.baseForme != null ? pk.baseForme : pk;
+                                            return enc.level >= getMinimumEvolutionLevel(base);
+                                        })
                                         .collect(Collectors.toList());
                                 if (validChoices.isEmpty()) {
                                     // Fallback: use the base form of the originally picked Pokémon
-                                    Pokemon baseForm = getBaseForm(enc.pokemon);
+                                    Pokemon baseForm = getBaseForm(
+                                            enc.pokemon.baseForme != null ? enc.pokemon.baseForme : enc.pokemon);
                                     enc.pokemon = baseForm;
-                                    needsReroll = false; 
-                                    break; 
+                                    needsReroll = false;
+                                    break;
                                 }
                                 enc.pokemon = validChoices.get(this.random.nextInt(validChoices.size()));
                                 needsReroll = true;
@@ -1209,13 +1228,18 @@ public abstract class AbstractRomHandler implements RomHandler {
                             needsReroll = false;
                             int minEvoLevel = getMinimumEvolutionLevel(enc.pokemon);
                             if (enc.level < minEvoLevel) {
-                                // Pick a new Pokémon from the pool that can exist at this level
                                 List<Pokemon> validChoices = possiblePokemon.stream()
-                                        .filter(pk -> enc.level >= getMinimumEvolutionLevel(pk))
+                                        .filter(pk -> {
+                                            Pokemon base = pk.baseForme != null ? pk.baseForme : pk;
+                                            return enc.level >= getMinimumEvolutionLevel(base);
+                                        })
                                         .collect(Collectors.toList());
                                 if (validChoices.isEmpty()) {
-                                    log("No valid Pokémon found for level " + enc.level + ". Skipping slot.");
-                                    continue;
+                                    Pokemon baseForm = getBaseForm(
+                                            enc.pokemon.baseForme != null ? enc.pokemon.baseForme : enc.pokemon);
+                                    enc.pokemon = baseForm;
+                                    needsReroll = false;
+                                    break;
                                 }
                                 enc.pokemon = validChoices.get(this.random.nextInt(validChoices.size()));
                                 needsReroll = true;
@@ -1284,10 +1308,10 @@ public abstract class AbstractRomHandler implements RomHandler {
                         boolean needsReroll = false;
                         do {
                             needsReroll = false;
-                            int minEvoLevel = getMinimumEvolutionLevel(enc.pokemon);
+                            Pokemon base = enc.pokemon.baseForme != null ? enc.pokemon.baseForme : enc.pokemon;
+                            int minEvoLevel = getMinimumEvolutionLevel(base);
                             if (enc.level < minEvoLevel) {
-                                enc.pokemon = areaMap.get(enc.pokemon);
-                                log(enc.pokemon.name + " rerolled due to evolutionSensibility check.");
+                                enc.pokemon = pickEntirelyRandomPokemon(allowAltFormes, noLegendaries, area, banned);
                                 needsReroll = true;
                             }
                         } while (needsReroll);
